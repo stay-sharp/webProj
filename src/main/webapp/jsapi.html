@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>公众号/生活号测试页面</title>
+</head>
+<body>
+
+<p id="输入公众号返回的json串，或生活号返回的tradeNo"></p>
+<p id="resultText"></p>
+<input id="jumpText" type="text" style="height:100px;width:500px">
+<br>
+<button id="wxjsapi" onclick="wxjsapi()">唤起微信支付</button>
+<br>
+<button id="alipayjsapi" onclick="alipayjsapi()">唤起支付宝支付</button>
+<script type="text/javascript">
+    /*--如下是微信的代码--*/
+    function wxjsapi() {
+        if (isWeixin()) {
+            var data = document.getElementById("jumpText").value;
+            var json = JSON.parse(data);
+            onBridgeReady(json);
+        } else {
+            document.getElementById('resultText').innerHTML = '请在微信环境内测试微信公众号支付';
+        }
+    }
+
+    function onBridgeReady(json) {
+        if (typeof WeixinJSBridge == "undefined") {
+            if (document.addEventListener) {
+                document.addEventListener('WeixinJSBridgeReady', function () {
+                    onBridge(json);
+                }, false);
+            } else if (document.attachEvent) {
+                document.attachEvent('WeixinJSBridgeReady', function () {
+                    onBridge(json);
+                });
+                document.attachEvent('onWeixinJSBridgeReady', function () {
+                    onBridge(json);
+                });
+            }
+        } else {
+            onBridge(json);
+        }
+    }
+
+    function onBridge(json) {
+        WeixinJSBridge.invoke(
+            'getBrandWCPayRequest', json,
+            function (res) {
+                if (res.err_msg == "get_brand_wcpay_request:ok") {
+                    document.getElementById('resultText').innerHTML = '支付完成';
+                } else {
+                    document.getElementById('resultText').innerHTML = '唤起支付失败';
+                }
+            }
+        );
+    }
+
+    /*--如下是支付宝的代码--*/
+    function alipayjsapi() {
+        if (isAlipay()) {
+            var data = document.getElementById("jumpText").value;
+            ready(function () {
+                AlipayJSBridge.call("tradePay", {
+                    tradeNO: data
+                }, function (result) {
+                    if (result.resultCode == "9000") {
+                        document.getElementById('resultText').innerHTML = '支付完成';
+                    }
+                });
+            });
+        } else {
+            document.getElementById('resultText').innerHTML = '请在支付宝环境内测试生活号支付';
+        }
+    }
+
+    function ready(callback) {
+        // 如果jsbridge已经注入则直接调用
+        if (window.AlipayJSBridge) {
+            callback && callback();
+        } else {
+            // 如果没有注入则监听注入的事件
+            document.addEventListener('AlipayJSBridgeReady', callback, false);
+        }
+    }
+
+    /*--如下是共用的代码--*/
+    /**
+     * 判断是否是微信浏览器
+     * @returns {boolean}
+     */
+    function isWeixin() {
+        var userAgentString = window.navigator ? window.navigator.userAgent : "";
+        var weixinreg = /MicroMessenger/;
+        if (weixinreg.test(userAgentString)) {
+            return true;
+        }
+        return false;
+    }
+
+    /*
+    * 判断是否是支付宝浏览器
+    * */
+    function isAlipay() {
+        var userAgent = navigator.userAgent.toLowerCase();
+        if (userAgent.match(/Alipay/i) == "alipay") {
+            return true;
+        } else {
+            return false;
+        }
+    }
+</script>
+
+</body>
+</html>
