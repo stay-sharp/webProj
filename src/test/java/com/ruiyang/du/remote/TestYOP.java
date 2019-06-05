@@ -46,7 +46,7 @@ public class TestYOP {
         request.addParam("tradeDesc", "ttt");
         request.addParam("notifyUrl", "www.baidu.com"); //支付成功回调地址
         request.addParam("fundProcessType", ""); //资金处理类型
-        request.addParam("payType", "WECHAT_PASSIVE"); //支付方式
+        request.addParam("payType", "ALIPAY_PASSIVE"); //支付方式
 
         /*公众号、生活号*/
         request.addParam("subAppId", "wx9e13bd68a8f1921e");

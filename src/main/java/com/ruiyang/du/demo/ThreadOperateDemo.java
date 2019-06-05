@@ -2,7 +2,7 @@ package com.ruiyang.du.demo;
 
 import java.util.concurrent.*;
 
-public class OperateDemo {
+public class ThreadOperateDemo {
 
 
     static class MyThread1 extends Thread {

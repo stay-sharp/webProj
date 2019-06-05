@@ -13,7 +13,7 @@ import java.net.URLEncoder;
 
 
 @RestController
-@RequestMapping(value = "/jspay")
+@RequestMapping(value = "/jsapi")
 public class JsapiAuthController {
 
     Logger logger = LoggerFactory.getLogger(JsapiAuthController.class);
