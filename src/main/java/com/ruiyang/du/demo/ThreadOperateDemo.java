@@ -1,5 +1,9 @@
 package com.ruiyang.du.demo;
 
+import com.alibaba.fastjson.JSONObject;
+import com.ruiyang.du.bo.HttpClientResult;
+import com.ruiyang.du.utils.HttpClientUtils;
+
 import java.util.concurrent.*;
 
 public class ThreadOperateDemo {
@@ -15,7 +19,7 @@ public class ThreadOperateDemo {
     static class MyThread2 implements Runnable {
         @Override
         public void run() {
-            System.out.println("MyThread2 implements Runnable, running");
+            testGet("http://localhost:8081/bankfront-callback/interest/ylbank");
         }
     }
 
@@ -26,23 +30,22 @@ public class ThreadOperateDemo {
             return "call finish";
         }
     }
+
+    private static void testGet(String url){
+        try {
+            System.out.println(Thread.currentThread().getName() + "子线程开始执行");
+            HttpClientResult httpClientResult = HttpClientUtils.doGet(url, 5000, 5000, null, null);
+            System.out.println(Thread.currentThread().getName() + "子线程执行完毕，返回信息：" + httpClientResult.getContent());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
     public static void main(String[] args) throws Exception {
-        MyThread1 myThread1 = new MyThread1();
-        myThread1.start();
-
-
-
-        MyThread2 myThread2 = new MyThread2();
-        new Thread(myThread2).start();
-
-        MyThread3 myThread3 = new MyThread3();
         ArrayBlockingQueue<Runnable> queue = new ArrayBlockingQueue<>(128);
-        ThreadPoolExecutor executor = new ThreadPoolExecutor(1,2,10, TimeUnit.SECONDS, queue);
-        Future submit = executor.submit(myThread3);
-        System.out.println(submit.get());
-
-
-
-        System.out.println("执行完毕");
+        ThreadPoolExecutor executor = new ThreadPoolExecutor(5, 5, 30, TimeUnit.SECONDS, queue);
+        for (int i = 0; i < 20; i++) {
+            MyThread2 myThread = new MyThread2();
+            executor.submit(myThread);
+        }
     }
 }

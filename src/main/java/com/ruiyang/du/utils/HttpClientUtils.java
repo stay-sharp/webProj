@@ -5,52 +5,50 @@ import org.apache.http.HttpStatus;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
-import org.apache.http.client.methods.*;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.client.utils.URIBuilder;
+import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
+import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.util.EntityUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
-/**
- * Created by yp-tc-m-5039 on 2018/8/17.
- */
+
 public class HttpClientUtils {
 
-    // 编码格式。发送编码格式统一用UTF-8
-    private static final String ENCODING = "UTF-8";
 
-    // 设置连接超时时间，单位毫秒。
-    private static final int CONNECT_TIMEOUT = 10000;
+    private static final String CHARSET_UTF8 = "utf-8";
+    private static final int CONN_TIME_OUT = 5000;
+    private static final int READ_TIME_OUT = 5000;
 
-    // 请求获取数据的超时时间(即响应时间)，单位毫秒。
-    private static final int SOCKET_TIMEOUT = 10000;
+    private static final Logger logger = LoggerFactory.getLogger(HttpClientUtils.class);
 
-
-
+    private static volatile CloseableHttpClient httpClient = null;
+    private static final Object SYNC_LOCK = new Object();
 
     /**
      * 发送get请求；带请求头和请求参数
      *
-     * @param url 请求地址
+     * @param url     请求地址
      * @param headers 请求头集合
-     * @param params 请求参数集合
+     * @param params  请求参数集合
      * @return
      * @throws Exception
      */
-    public static HttpClientResult doGet(String url, Map<String, String> headers, Map<String, String> params) throws Exception {
-
-
-        // 创建httpClient对象
-        CloseableHttpClient httpClient = HttpClients.createDefault();
-
+    public static HttpClientResult doGet(String url, int connTimeout, int readTimeout, Map<String, String> headers, Map<String, String> params) throws Exception {
         // 创建访问的地址
         URIBuilder uriBuilder = new URIBuilder(url);
         if (params != null) {
@@ -59,86 +57,105 @@ public class HttpClientUtils {
                 uriBuilder.setParameter(entry.getKey(), entry.getValue());
             }
         }
-
         // 创建http对象
         HttpGet httpGet = new HttpGet(uriBuilder.build());
-        /**
-         * setConnectTimeout：设置连接超时时间，单位毫秒。
-         * setConnectionRequestTimeout：设置从connect Manager(连接池)获取Connection
-         * 超时时间，单位毫秒。这个属性是新加的属性，因为目前版本是可以共享连接池的。
-         * setSocketTimeout：请求获取数据的超时时间(即响应时间)，单位毫秒。 如果访问一个接口，多少时间内无法返回数据，就直接放弃此次调用。
-         */
-        RequestConfig requestConfig = RequestConfig.custom().setConnectTimeout(CONNECT_TIMEOUT).setSocketTimeout(SOCKET_TIMEOUT).build();
+        RequestConfig requestConfig = RequestConfig.custom().setConnectTimeout(connTimeout).setSocketTimeout(readTimeout).build();
         httpGet.setConfig(requestConfig);
-
         // 设置请求头
         packageHeader(headers, httpGet);
-
         // 创建httpResponse对象
         CloseableHttpResponse httpResponse = null;
-
         try {
             // 执行请求并获得响应结果
-            return getHttpClientResult(httpResponse, httpClient, httpGet);
+            return requestAndGetResult(getHttpClient(), httpGet);
         } finally {
             // 释放资源
-            release(httpResponse, httpClient);
+            release(httpResponse);
         }
     }
 
     /**
      * 发送post请求；带请求头和请求参数
      *
-     * @param url 请求地址
-     * @param headers 请求头集合
-     * @param params 请求参数集合
-     * @return
+     * @param url         请求地址
+     * @param connTimeout
+     * @param readTimeout
+     * @param headers     请求头集合
+     * @param params      请求参数集合字符串
      * @throws Exception
      */
-    public static HttpClientResult doPost(String url, Map<String, String> headers, Map<String, String> params) throws Exception {
-
-
-        // 创建httpClient对象
-        CloseableHttpClient httpClient = HttpClients.createDefault();
-
+    public static HttpClientResult doPost(String url, int connTimeout, int readTimeout, Map<String, String> headers, String params) throws Exception {
         // 创建http对象
         HttpPost httpPost = new HttpPost(url);
-        /**
-         * setConnectTimeout：设置连接超时时间，单位毫秒。
-         * setConnectionRequestTimeout：设置从connect Manager(连接池)获取Connection
-         * 超时时间，单位毫秒。这个属性是新加的属性，因为目前版本是可以共享连接池的。
-         * setSocketTimeout：请求获取数据的超时时间(即响应时间)，单位毫秒。 如果访问一个接口，多少时间内无法返回数据，就直接放弃此次调用。
-         */
-        RequestConfig requestConfig = RequestConfig.custom().setConnectTimeout(CONNECT_TIMEOUT).setSocketTimeout(SOCKET_TIMEOUT).build();
+        RequestConfig requestConfig = RequestConfig.custom().setConnectTimeout(connTimeout).setSocketTimeout(readTimeout).build();
         httpPost.setConfig(requestConfig);
         // 设置请求头
         packageHeader(headers, httpPost);
-
         // 封装请求参数
-        packageParam(params, httpPost);
-
+        httpPost.setEntity(new StringEntity(params, CHARSET_UTF8));
         // 创建httpResponse对象
         CloseableHttpResponse httpResponse = null;
-
         try {
             // 执行请求并获得响应结果
-            return getHttpClientResult(httpResponse, httpClient, httpPost);
-        } catch (Exception e){
-            return new HttpClientResult(HttpStatus.SC_INTERNAL_SERVER_ERROR,e.getMessage());
-        }finally {
+            return requestAndGetResult(getHttpClient(), httpPost);
+        } catch (Exception e) {
+            logger.error("doPost() 请求外部接口异常:", e);
+            return new HttpClientResult(HttpStatus.SC_INTERNAL_SERVER_ERROR, e.getMessage());
+        } finally {
             // 释放资源
-            release(httpResponse, httpClient);
+            release(httpResponse);
+        }
+    }
+    /**
+     * 发送post请求；带请求头和请求参数
+     *
+     * @param url         请求地址
+     * @param connTimeout
+     * @param readTimeout
+     * @param headers     请求头集合
+     * @param params      请求参数集合
+     * @return
+     * @throws Exception
+     */
+    public static HttpClientResult doPost(String url, int connTimeout, int readTimeout, Map<String, String> headers, Map<String, String> params) throws Exception {
+        // 创建http对象
+        HttpPost httpPost = new HttpPost(url);
+        RequestConfig requestConfig = RequestConfig.custom().setConnectTimeout(connTimeout).setSocketTimeout(readTimeout).build();
+        httpPost.setConfig(requestConfig);
+        // 设置请求头
+        packageHeader(headers, httpPost);
+        // 封装请求参数
+        if (params != null) {
+            List<NameValuePair> nvps = new ArrayList<NameValuePair>();
+            Set<Map.Entry<String, String>> entrySet = params.entrySet();
+            for (Map.Entry<String, String> entry : entrySet) {
+                nvps.add(new BasicNameValuePair(entry.getKey(), entry.getValue()));
+            }
+            // 设置到请求的http对象中
+            httpPost.setEntity(new UrlEncodedFormEntity(nvps, CHARSET_UTF8));
+        }
+        // 创建httpResponse对象
+        CloseableHttpResponse httpResponse = null;
+        try {
+            // 执行请求并获得响应结果
+            return requestAndGetResult(getHttpClient(), httpPost);
+        } catch (Exception e) {
+            logger.error("doPost() 请求外部接口异常:", e);
+            return new HttpClientResult(HttpStatus.SC_INTERNAL_SERVER_ERROR, e.getMessage());
+        } finally {
+            // 释放资源
+            release(httpResponse);
         }
     }
 
 
-
     /**
      * Description: 封装请求头
+     *
      * @param params
      * @param httpMethod
      */
-    public static void packageHeader(Map<String, String> params, HttpRequestBase httpMethod) {
+    private static void packageHeader(Map<String, String> params, HttpRequestBase httpMethod) {
         // 封装请求头
         if (params != null) {
             Set<Map.Entry<String, String>> entrySet = params.entrySet();
@@ -150,68 +167,59 @@ public class HttpClientUtils {
     }
 
     /**
-     * Description: 封装请求参数
-     *
-     * @param params
-     * @param httpMethod
-     */
-    public static void packageParam(Map<String, String> params, HttpEntityEnclosingRequestBase httpMethod) throws UnsupportedEncodingException {
-        // 封装请求参数
-        if (params != null) {
-            List<NameValuePair> nvps = new ArrayList<NameValuePair>();
-            Set<Map.Entry<String, String>> entrySet = params.entrySet();
-            for (Map.Entry<String, String> entry : entrySet) {
-                nvps.add(new BasicNameValuePair(entry.getKey(), entry.getValue()));
-            }
-
-            // 设置到请求的http对象中
-            httpMethod.setEntity(new UrlEncodedFormEntity(nvps, ENCODING));
-        }
-    }
-
-    /**
-     * Description: 获得响应结果
-     *
-     * @param httpResponse
+     * Description: 请求并获得响应结果
      * @param httpClient
      * @param httpMethod
      * @return
      * @throws Exception
      */
-    public static HttpClientResult getHttpClientResult(CloseableHttpResponse httpResponse, CloseableHttpClient httpClient, HttpRequestBase httpMethod) throws Exception {
+    private static HttpClientResult requestAndGetResult(CloseableHttpClient httpClient, HttpRequestBase httpMethod) throws Exception {
         // 执行请求
-        httpResponse = httpClient.execute(httpMethod);
-
+        CloseableHttpResponse httpResponse = httpClient.execute(httpMethod);
         // 获取返回结果
         if (httpResponse != null && httpResponse.getStatusLine() != null) {
             String content = "";
             if (httpResponse.getEntity() != null) {
-                content = EntityUtils.toString(httpResponse.getEntity(), ENCODING);
+                content = EntityUtils.toString(httpResponse.getEntity(), CHARSET_UTF8);
             }
             return new HttpClientResult(httpResponse.getStatusLine().getStatusCode(), content);
         }
+        logger.warn("requestAndGetResult() 响应为空");
         return new HttpClientResult(HttpStatus.SC_INTERNAL_SERVER_ERROR);
     }
 
     /**
      * Description: 释放资源
+     *  @param httpResponse
      *
-     * @param httpResponse
-     * @param httpClient
      */
-    public static void release(CloseableHttpResponse httpResponse, CloseableHttpClient httpClient) throws IOException {
+    private static void release(CloseableHttpResponse httpResponse) throws IOException {
         // 释放资源
         if (httpResponse != null) {
-            try {
-                httpResponse.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-        if (httpClient != null) {
-            httpClient.close();
+            httpResponse.close();
         }
     }
 
+    private static CloseableHttpClient getHttpClient(){
+        if (httpClient == null) {
+            synchronized (SYNC_LOCK) {
+                if (httpClient == null) {
+                    httpClient = createHttpClient();
+                }
+            }
+        }
+        return httpClient;
+    }
+
+    private static CloseableHttpClient createHttpClient(){
+        // 创建httpClient对象
+        PoolingHttpClientConnectionManager connManager = new PoolingHttpClientConnectionManager();
+        connManager.setDefaultMaxPerRoute(5);
+        connManager.setMaxTotal(20);
+        HttpClientBuilder custom = HttpClientBuilder.create();
+        custom.setConnectionManager(connManager);
+        custom.setConnectionTimeToLive(30, TimeUnit.SECONDS);
+        return custom.build();
+    }
 
 }
