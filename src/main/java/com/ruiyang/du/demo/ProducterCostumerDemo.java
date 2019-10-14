@@ -1,54 +1,18 @@
 package com.ruiyang.du.demo;
 
 
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.ReentrantLock;
+
 public class ProducterCostumerDemo {
 
-    static class Dept {
-        private Integer goods;
+    static class Dept extends ReentrantLock{
+        private volatile Integer goods;
+        private Condition PCondition = this.newCondition();
+        private Condition CCondition = this.newCondition();
+
         public Dept(Integer goods) {
             this.goods = goods;
-        }
-
-        public synchronized void product() {
-            try {
-                /*同步锁实现start*/
-                while (true) {
-                    while (goods.intValue() >= 5) {
-                        this.wait();
-                    }
-                    goods++;
-                    System.out.println(Thread.currentThread().getName() + "生产完毕，当前库存数：" + goods.intValue());
-                    if (goods.intValue() > 0) {
-                        this.notifyAll();
-                    }
-                    Thread.sleep(100);
-
-                }
-                /*同步锁实现end*/
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-
-        public synchronized void costume() {
-            try {
-                /*同步锁实现start*/
-                while (true) {
-                    while (goods.intValue() <= 0) {
-                        this.wait();
-                    }
-                    goods--;
-                    System.out.println(Thread.currentThread().getName() + "消费完毕，当前库存数：" + goods.intValue());
-                    if (goods.intValue() < 5) {
-                        this.notifyAll();
-                    }
-                    Thread.sleep(100);
-
-                }
-                /*同步锁实现end*/
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
         }
     }
 
@@ -62,7 +26,51 @@ public class ProducterCostumerDemo {
 
         @Override
         public void run() {
-            dept.product();
+            product(dept);
+        }
+
+        /**
+         * 同步锁实现
+         *
+         * @param dept
+         */
+        public void product(Dept dept) {
+            try {
+                while (true) {
+                    synchronized (dept) {
+                        while (dept.goods.intValue() >= 5) {
+                            dept.wait();
+                        }
+                        dept.goods++;
+                        System.out.println(Thread.currentThread().getName() + "生产完毕，当前库存数：" + dept.goods.intValue());
+                        dept.notifyAll();
+                        Thread.sleep(100);
+                    }
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
+        /**
+         * JUC锁实现
+         */
+        public void productWithLock(Dept dept) {
+            while (true) {
+                try {
+                    dept.lock();
+                    while (dept.goods.longValue() >= 5) {
+                        dept.PCondition.await();
+                    }
+                    dept.goods++;
+                    System.out.println(Thread.currentThread().getName() + "生产完毕，当前库存数：" + dept.goods.intValue());
+                    dept.CCondition.signalAll();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                } finally {
+                    dept.unlock();
+                }
+            }
         }
     }
 
@@ -75,7 +83,50 @@ public class ProducterCostumerDemo {
 
         @Override
         public void run() {
-            dept.costume();
+            costume(dept);
+        }
+
+        /**
+         * 同步锁实现
+         */
+        public void costume(Dept dept) {
+            try {
+                while (true) {
+                    synchronized (dept) {
+                        while (dept.goods.intValue() <= 0) {
+                            dept.wait();
+                        }
+                        dept.goods--;
+                        System.out.println(Thread.currentThread().getName() + "消费完毕，当前库存数：" + dept.goods.intValue());
+                        dept.notifyAll();
+                        Thread.sleep(100);
+                    }
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
+        /**
+         * JUC锁实现
+         */
+        public void costumeWithLock(Dept dept) {
+            while (true) {
+                try {
+                    dept.lock();
+                    while (dept.goods.intValue() <= 0) {
+                        dept.CCondition.await();
+                    }
+                    dept.goods--;
+                    System.out.println(Thread.currentThread().getName() + "消费完毕，当前库存数：" + dept.goods.intValue());
+                    dept.PCondition.signalAll();
+                    Thread.sleep(100);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                } finally {
+                    dept.unlock();
+                }
+            }
         }
     }
 
