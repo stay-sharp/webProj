@@ -13,7 +13,7 @@ public class ProducterCostumerDemo {
             try {
                 /*同步锁实现start*/
                 while (true) {
-                    if (goods.intValue() >= 5) {
+                    while (goods.intValue() >= 5) {
                         this.wait();
                     }
                     goods++;
@@ -34,7 +34,7 @@ public class ProducterCostumerDemo {
             try {
                 /*同步锁实现start*/
                 while (true) {
-                    if (goods.intValue() <= 0) {
+                    while (goods.intValue() <= 0) {
                         this.wait();
                     }
                     goods--;
