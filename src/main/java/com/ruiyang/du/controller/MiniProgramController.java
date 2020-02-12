@@ -9,16 +9,16 @@ import com.ruiyang.du.utils.MapToObject;
 import com.yeepay.g3.sdk.yop.client.YopRequest;
 import com.yeepay.g3.sdk.yop.client.YopResponse;
 import com.yeepay.g3.sdk.yop.client.YopRsaClient;
+import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
 
 import java.util.HashMap;
 import java.util.Map;
 
 import static com.ruiyang.du.utils.EncoderHmacSha256.encoderHmacSha256;
 
-@RestController
-@RequestMapping(value = "/api/miniprogram")
+@Controller
+@RequestMapping(value = "/miniprogram")
 public class MiniProgramController {
 
     private static final String APP_ID = "wxc2b60cc7983dce85";
