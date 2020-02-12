@@ -1,6 +1,9 @@
 package com.ruiyang.du.demo;
 
 
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -130,16 +133,34 @@ public class ProducterCostumerDemo {
         }
     }
 
+//    public static void main(String[] args) {
+//        Integer goods = new Integer(0);
+//        Dept dept = new Dept(goods);
+//        Producter producter1 = new Producter(dept);
+//        Producter producter2 = new Producter(dept);
+//        Costumer costumer1 = new Costumer(dept);
+//        Costumer costumer2 = new Costumer(dept);
+//        new Thread(producter1).start();
+//        new Thread(producter2).start();
+//        new Thread(costumer1).start();
+//        new Thread(costumer2).start();
+//    }
+
     public static void main(String[] args) {
-        Integer goods = new Integer(0);
-        Dept dept = new Dept(goods);
-        Producter producter1 = new Producter(dept);
-        Producter producter2 = new Producter(dept);
-        Costumer costumer1 = new Costumer(dept);
-        Costumer costumer2 = new Costumer(dept);
-        new Thread(producter1).start();
-        new Thread(producter2).start();
-        new Thread(costumer1).start();
-        new Thread(costumer2).start();
+        Date startDate = dateParamFormat(30);
+        Date startEnd = dateParamFormat(5);
+        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        String startDateStr = simpleDateFormat.format(startDate);
+        String startDateEnd = simpleDateFormat.format(startEnd);
+        System.out.println(startDateStr+"====="+startDateEnd);
+    }
+
+    private static Date dateParamFormat(Integer minutesBeforeNow){
+        Date now = new Date();
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(now);
+        calendar.add(Calendar.MINUTE,-minutesBeforeNow);
+        Date date = calendar.getTime();
+        return date;
     }
 }
