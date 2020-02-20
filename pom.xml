@@ -109,6 +109,14 @@
             <artifactId>junit</artifactId>
             <version>4.12</version>
         </dependency>
+        <!-- https://mvnrepository.com/artifact/com.alipay.sdk/alipay-sdk-java -->
+        <dependency>
+            <groupId>com.alipay.sdk</groupId>
+            <artifactId>alipay-sdk-java</artifactId>
+            <version>4.8.73.ALL</version>
+        </dependency>
+
+
         <!--公司项目-->
         <dependency>
             <groupId>com.yeepay.g3.yop</groupId>

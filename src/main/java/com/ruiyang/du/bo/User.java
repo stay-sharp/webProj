@@ -2,6 +2,16 @@ package com.ruiyang.du.bo;
 
 public class User {
 
+    private String id;
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
+
     public static void main(String[] args) {
         StringBuilder logStr = new StringBuilder("调用中国银联交易接口，请求地址:[");
         logStr.append("www.qq.com").append("],").append(System.lineSeparator());
