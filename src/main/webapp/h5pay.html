@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>H5支付测试页面</title>
+</head>
+<body>
+
+<p id="输入商户订单号">输入商户订单号</p>
+<input id="merchantOrderNo" type="text" style="height:50px;width:200px">
+<p id="输入商户编号">输入商户编号</p>
+<input id="merchantNo" type="text" style="height:50px;width:200px">
+<p id="输入商品名称">输入商品名称</p>
+<input id="goods" type="text" style="height:50px;width:200px">
+<p id="输入金额">输入金额</p>
+<input id="amount" type="text" style="height:50px;width:200px">
+
+<p id="resultText"></p>
+<br>
+<button id="alipayjsapi" onclick="alipaymini()">打开支付宝小程序</button>
+<script type="text/javascript">
+    /*-- 如下是调用亿企通下单的代码 --*/
+    function alipaymini() {
+
+        var merchantNo = document.getElementById("merchantNo").value;
+        var merchantOrderNo = document.getElementById("merchantOrderNo").value;
+        var goods = document.getElementById("goods").value;
+        var amount = document.getElementById("amount").value;
+
+        let params = encodeURIComponent("merchantNo="+merchantNo+"&merchantOrderNo="+merchantOrderNo+"&goods="+goods+"&amount="+amount);
+
+        window.location.href = "alipays://platformapi/startapp?appId=2021001135646782 &query="+params;
+    }
+
+</script>
+
+</body>
+</html>
