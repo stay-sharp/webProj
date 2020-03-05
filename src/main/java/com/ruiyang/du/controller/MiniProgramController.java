@@ -14,6 +14,10 @@ import com.ruiyang.du.utils.MapToObject;
 import com.yeepay.g3.sdk.yop.client.YopRequest;
 import com.yeepay.g3.sdk.yop.client.YopResponse;
 import com.yeepay.g3.sdk.yop.client.YopRsaClient;
+import com.yeepay.g3.sdk.yop.encrypt.CertTypeEnum;
+import com.yeepay.g3.sdk.yop.encrypt.DigestAlgEnum;
+import com.yeepay.g3.sdk.yop.encrypt.DigitalSignatureDTO;
+import com.yeepay.g3.sdk.yop.utils.DigitalEnvelopeUtils;
 import com.yeepay.g3.utils.common.StringUtils;
 import com.yeepay.g3.utils.common.log.Logger;
 import com.yeepay.g3.utils.common.log.LoggerFactory;
@@ -21,8 +25,15 @@ import org.apache.commons.collections.map.HashedMap;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
+import sun.misc.BASE64Decoder;
 
 import javax.servlet.http.HttpServletRequest;
+import java.io.IOException;
+import java.security.KeyFactory;
+import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -88,6 +99,7 @@ public class MiniProgramController {
 
     /**
      * 小程序-用户授权
+     * 供微信小程序、支付宝小程序环境内调用
      * @param jsCode
      * @return
      */
@@ -116,54 +128,10 @@ public class MiniProgramController {
         }
     }
 
-    private String oauthForWXMiniProgram(String appId, String appSecret, String jsCode) {
-        Map<String,String> map = new HashedMap();
-        try {
-            // 获取微信小程序获取openID的API接口
-            String openIdUrl = "https://api.weixin.qq.com/sns/jscode2session?appid=APPID&secret=SECRET&js_code=JSCODE&grant_type=authorization_code";
-            openIdUrl = openIdUrl.replace("APPID", appId).replace("SECRET", appSecret).replace("JSCODE", jsCode);
-            String jsonString = HttpsHelper.doGet("", openIdUrl, "utf-8");
-            logger.info("oauthForOpenidForMiniProgram() 请求微信授权登录，返回：" ,jsonString);
-            JSONObject jsonObject = JSONObject.parseObject(jsonString);
-            String openId = jsonObject.getString("openid");
-            if (openId != null) {
-                map.put("openId",openId);
-                map.put("msg","success");
-                return JSONObject.toJSONString(map);
-            }
-            map.put("msg",jsonObject.getString("errmsg"));
-            return JSONObject.toJSONString(map);
-        } catch (Throwable e) {
-            logger.error("oauthForWXMiniProgram() error" ,e);
-            map.put("msg","request wechat oauth2 failed");
-            return JSONObject.toJSONString(map);
-        }
-    }
-
-    private String oauthForAliMiniProgram(String authCode) {
-        Map<String,String> map = new HashedMap();
-        try {
-            AlipaySystemOauthTokenRequest request = new AlipaySystemOauthTokenRequest();
-            request.setGrantType("authorization_code");
-            request.setCode(authCode);
-            AlipaySystemOauthTokenResponse response = alipayClient.execute(request);
-            logger.info("oauthForAliMiniProgram() 请求支付宝授权登录，返回：" ,JSONObject.toJSONString(response));
-            if(response.isSuccess()){
-                map.put("openId",response.getUserId());
-                map.put("msg","success");
-                return JSONObject.toJSONString(map);
-            } else {
-                map.put("msg",response.getMsg());
-                return JSONObject.toJSONString(map);
-            }
-        } catch (Throwable e) {
-            logger.error("oauthForAliMiniProgram() error" ,e);
-            map.put("msg","request alipay oauth2 failed");
-            return JSONObject.toJSONString(map);
-        }
-    }
 
     /**
+     * 小程序-下单
+     * 供微信小程序、支付宝小程序环境内调用
      * @param openId
      * @param orderAmount
      * @param goodsName
@@ -201,15 +169,142 @@ public class MiniProgramController {
         }
     }
 
+    /**
+     * 小程序OPR下单
+     * 供APP调用，会调用OPR下单，返回token及必要参数签名
+     * @param request
+     * @param merchantNo
+     * @param orderAmount
+     * @param goodsName
+     * @return
+     */
+    @RequestMapping(value = "/token")
+    @ResponseBody
+    public String miniProgramPay(HttpServletRequest request, String merchantNo, String orderAmount, String goodsName){
+        Map<String,Object> result = new HashedMap();
+        if(StringUtils.isBlank(orderAmount) || StringUtils.isBlank(goodsName)){
+            result.put("msg","param is null");
+            return JSONObject.toJSONString(result);
+        }
+        String orderId = "t_minipro_"+System.currentTimeMillis();
+        MiniProgramPayParam miniProgramPayParam = new MiniProgramPayParam(orderId, orderAmount, goodsName, "");
+        Merchant merchant = merchantMap.get(merchantNo);
+        if (merchant == null) {
+            merchant = merchantMap.get("10027785415");
+        }
+        //请求OPR下单
+        CreateOrderRespDTO createOrderRespDTO = null;
+        try {
+            createOrderRespDTO = oprOrder(miniProgramPayParam, merchant);
+        } catch (Exception e) {
+            logger.error("调用OPR接口异常 error" ,e);
+            result.put("msg","opr error");
+            return JSONObject.toJSONString(result);
+        }
+        if(createOrderRespDTO==null || StringUtils.isBlank(createOrderRespDTO.getToken())){
+            result.put("msg","opr error");
+            return JSONObject.toJSONString(result);
+        }
+        //签名
+        StringBuilder toSign=new StringBuilder("appKey=");
+        toSign.append("OPR:" + merchant.getParentMerchantNo()).append("&token=").append(createOrderRespDTO.getToken());
+        String sign = yopSign(toSign.toString(), merchant.getPrivateKey());
+        //组装返回信息
+        Map<String,String> displayOrderInfoMap = new HashedMap();
+        displayOrderInfoMap.put("merchantOrderNo",orderId);
+        displayOrderInfoMap.put("uniqueOrderNo",createOrderRespDTO.getUniqueOrderNo());
+        displayOrderInfoMap.put("amount",orderAmount);
+        result.put("displayOrderInfo",displayOrderInfoMap);
+        result.put("msg","success");
+        result.put("token",createOrderRespDTO.getToken());
+        result.put("appKey","OPR:" + merchant.getParentMerchantNo());
+        result.put("sign",sign);
+        return JSONObject.toJSONString(result);
+    }
+
+    private String yopSign(String plaintext,String privatekey){
+        PrivateKey isvPrivateKey = getPrivateKey(privatekey);
+        DigitalSignatureDTO digitalEnvelopeDTO = new DigitalSignatureDTO();
+        digitalEnvelopeDTO.setAppKey("_YOP");
+        digitalEnvelopeDTO.setCertType(CertTypeEnum.RSA2048);
+        digitalEnvelopeDTO.setDigestAlg(DigestAlgEnum.SHA256);
+        digitalEnvelopeDTO.setPlainText(plaintext);
+        String sign = DigitalEnvelopeUtils.sign0(digitalEnvelopeDTO, isvPrivateKey);
+        return sign;
+    }
+
+    //获取私钥对象
+    private static PrivateKey getPrivateKey(String priKey) {
+        PrivateKey privateKey = null;
+        PKCS8EncodedKeySpec priPKCS8;
+        try {
+            priPKCS8 = new PKCS8EncodedKeySpec(new BASE64Decoder().decodeBuffer(priKey));
+            KeyFactory keyf = KeyFactory.getInstance("RSA");
+            privateKey = keyf.generatePrivate(priPKCS8);
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        } catch (InvalidKeySpecException e) {
+            e.printStackTrace();
+        }
+        return privateKey;
+    }
+
+    private String oauthForWXMiniProgram(String appId, String appSecret, String jsCode) {
+        Map<String,String> map = new HashedMap();
+        try {
+            // 获取微信小程序获取openID的API接口
+            String openIdUrl = "https://api.weixin.qq.com/sns/jscode2session?appid=APPID&secret=SECRET&js_code=JSCODE&grant_type=authorization_code";
+            openIdUrl = openIdUrl.replace("APPID", appId).replace("SECRET", appSecret).replace("JSCODE", jsCode);
+            String jsonString = HttpsHelper.doGet("", openIdUrl, "utf-8");
+            logger.info("oauthForOpenidForMiniProgram() 请求微信授权登录，返回：" ,jsonString);
+            JSONObject jsonObject = JSONObject.parseObject(jsonString);
+            String openId = jsonObject.getString("openid");
+            if (openId != null) {
+                map.put("openId",openId);
+                map.put("msg","success");
+                return JSONObject.toJSONString(map);
+            }
+            map.put("msg",jsonObject.getString("errmsg"));
+            return JSONObject.toJSONString(map);
+        } catch (Throwable e) {
+            logger.error("oauthForWXMiniProgram() error" ,e);
+            map.put("msg","request wechat oauth2 failed");
+            return JSONObject.toJSONString(map);
+        }
+    }
+
+
+    private String oauthForAliMiniProgram(String authCode) {
+        Map<String,String> map = new HashedMap();
+        try {
+            AlipaySystemOauthTokenRequest request = new AlipaySystemOauthTokenRequest();
+            request.setGrantType("authorization_code");
+            request.setCode(authCode);
+            AlipaySystemOauthTokenResponse response = alipayClient.execute(request);
+            logger.info("oauthForAliMiniProgram() 请求支付宝授权登录，返回：" ,JSONObject.toJSONString(response));
+            if(response.isSuccess()){
+                map.put("openId",response.getUserId());
+                map.put("msg","success");
+                return JSONObject.toJSONString(map);
+            } else {
+                map.put("msg",response.getMsg());
+                return JSONObject.toJSONString(map);
+            }
+        } catch (Throwable e) {
+            logger.error("oauthForAliMiniProgram() error" ,e);
+            map.put("msg","request alipay oauth2 failed");
+            return JSONObject.toJSONString(map);
+        }
+    }
+
+
     private String orderPay(MiniProgramPayParam miniProgramPayParam, Merchant merchant, String platform) {
         Map<String,String> map = new HashedMap();
         CreateOrderRespDTO createOrderRespDTO = null;
         try {
-            YopRequest request = new YopRequest("OPR:" + merchant.getParentMerchantNo(), merchant.getPrivateKey());
-            this.buildCreateOrder(request, miniProgramPayParam, merchant);
-            YopResponse response = YopRsaClient.post(CREATE_URL, request);
-            Map<Object, Object> createOrderResult = (Map<Object, Object>) response.getResult();
-            createOrderRespDTO = (CreateOrderRespDTO) MapToObject.mapToObject(createOrderResult, CreateOrderRespDTO.class);
+            createOrderRespDTO = oprOrder(miniProgramPayParam, merchant);
             if(createOrderRespDTO==null || StringUtils.isBlank(createOrderRespDTO.getToken())){
                 map.put("msg","opr error");
                 return JSONObject.toJSONString(map);
@@ -237,6 +332,15 @@ public class MiniProgramController {
             map.put("msg","cashier error");
             return JSONObject.toJSONString(map);
         }
+    }
+
+    private CreateOrderRespDTO oprOrder(MiniProgramPayParam miniProgramPayParam, Merchant merchant) throws Exception{
+        YopRequest request = new YopRequest("OPR:" + merchant.getParentMerchantNo(), merchant.getPrivateKey());
+        this.buildCreateOrder(request, miniProgramPayParam, merchant);
+        YopResponse response = YopRsaClient.post(CREATE_URL, request);
+        Map<Object, Object> createOrderResult = (Map<Object, Object>) response.getResult();
+        CreateOrderRespDTO createOrderRespDTO = (CreateOrderRespDTO) MapToObject.mapToObject(createOrderResult, CreateOrderRespDTO.class);
+        return createOrderRespDTO;
     }
 
     private void buildOrderPay(YopRequest request, MiniProgramPayParam miniProgramPayParam, String token, String platform) {
