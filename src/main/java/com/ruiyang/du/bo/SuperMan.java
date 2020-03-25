@@ -3,6 +3,7 @@ package com.ruiyang.du.bo;
 public class SuperMan {
 
     private static volatile SuperMan singleton;
+    private static volatile boolean inited=false;
 
     public static SuperMan getInstance() {
         if (singleton == null) {
@@ -16,7 +17,10 @@ public class SuperMan {
     }
 
     private SuperMan() {
-        throw new RuntimeException("SuperMan 类设计为单例");
+        if (inited) {
+            throw new RuntimeException("SuperMan 类设计为单例");
+        }
+        inited = true;
     }
 
     private String id;
@@ -28,5 +32,7 @@ public class SuperMan {
     public void setId(String id) {
         this.id = id;
     }
+
+
 
 }

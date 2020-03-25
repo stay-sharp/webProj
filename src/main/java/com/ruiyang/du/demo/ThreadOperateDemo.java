@@ -40,6 +40,10 @@ public class ThreadOperateDemo {
             e.printStackTrace();
         }
     }
+
+
+
+
     public static void main(String[] args) throws Exception {
         ArrayBlockingQueue<Runnable> queue = new ArrayBlockingQueue<>(128);
         ThreadPoolExecutor executor = new ThreadPoolExecutor(5, 5, 30, TimeUnit.SECONDS, queue);
