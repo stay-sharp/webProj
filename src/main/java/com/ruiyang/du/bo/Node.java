@@ -39,17 +39,7 @@ public class Node {
     }
 
     public static void main(String[] args) {
-        //无重复字符的最长子串
-//        System.out.println(getMaxUnrepeatSubStringLength("abceabcdb"));
 
-        //杨辉三角
-//        List<List<Integer>> yangHuiTriangel = getYangHuiTriangel(5);
-//        for(List<Integer> row:yangHuiTriangel){
-//            System.out.println(row);
-//        }
-
-        //杨辉三角的最后一行
-//        System.out.println(getLastrowOfYangHuiTriangel(2));
 
         //中序遍历
 //        Node top=new Node("5");
@@ -101,114 +91,5 @@ public class Node {
         return this.getRight()!=null;
     }
 
-    /**
-     * 直接获取杨辉三角的最后一行
-     * @param rows
-     * @return
-     */
-    private static List<Integer> getLastrowOfYangHuiTriangel(int rows) {
-        List<Integer> row = new ArrayList<>(rows);
-        int lastModified = 1;
-        for (int i = 0; i < rows; i++) {
-            if(i==0) {
-                row.add(1);
-            }else {
-                lastModified = toLastRow(row, lastModified);
-            }
-        }
-        return row;
-    }
-
-    private static int toLastRow(List<Integer> current, int lastModified) {
-        for (int i = 1; i <= current.size(); i++) {
-            Integer lastValue = lastModified;
-            Integer anotherValue = 0;
-
-            if (i < current.size()) {
-                anotherValue = current.get(i);
-                lastModified = current.get(i);
-                current.set(i, lastValue + anotherValue);
-            }else {
-                current.add(lastValue + anotherValue);
-                return lastModified;
-            }
-        }
-        return 0;
-    }
-
-
-
-    /**
-     * 获取杨辉三角
-     * @param rows
-     * @return
-     */
-    private static List<List<Integer>> getYangHuiTriangel(int rows) {
-        List<List<Integer>> result = new ArrayList<>();
-        for (int i = 0; i < rows; i++) {
-            List<Integer> row = new ArrayList<>();
-            if(i==0) {
-                row.add(1);
-            }else {
-                row = nextRow(result.get(i-1));
-            }
-            result.add(row);
-        }
-        return result;
-    }
-
-    private static List<Integer> nextRow(List<Integer> lastRow) {
-        List<Integer> nextRow = new ArrayList<>();
-        int sizeOfLast = lastRow.size();
-        for (int i = 0; i < sizeOfLast + 1; i++) {
-            Integer lastValue = 0;
-            Integer anouther = 0;
-            if(i==0){
-                lastValue = lastRow.get(i);
-            }else if (i < sizeOfLast) {
-                lastValue = lastRow.get(i-1);
-                anouther = lastRow.get(i);
-            }else {
-                lastValue = lastRow.get(i-1);
-            }
-            nextRow.add(lastValue + anouther);
-        }
-        return nextRow;
-    }
-
-    /**
-     * 获取不含重复字符的最长子串的长度
-     * @param str
-     * @return
-     */
-    private static int getMaxUnrepeatSubStringLength(String str){
-        int totalLength = str.length();
-        if(totalLength==0){
-            int lastMax = 0;
-        }
-        int lastMax = 1;
-        for (int from = 0; from < totalLength; from++) {
-            int currMax = 1;
-            for (int to = from + 1; to < totalLength; to++) {
-                if (checkSub(from, to, str)) {
-                    break;
-                }
-                currMax++;
-            }
-            if (currMax > lastMax) {
-                lastMax = currMax;
-            }
-        }
-        return lastMax;
-    }
-
-    private static boolean checkSub(int from,int to,String str){
-        if(to==str.length()){
-            return true;
-        }
-        String substring = str.substring(from, to);
-        char nextChar = str.charAt(to);
-        return substring.contains(String.valueOf(nextChar));
-    }
 
 }
