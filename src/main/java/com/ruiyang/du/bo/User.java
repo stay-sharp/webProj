@@ -1,6 +1,6 @@
 package com.ruiyang.du.bo;
 
-public class User extends Dad {
+public class User {
 
     private String id;
 

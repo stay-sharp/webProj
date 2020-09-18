@@ -1,10 +1,5 @@
 package com.ruiyang.du.bo;
 
-import com.alibaba.fastjson.JSONObject;
-
-import java.util.ArrayList;
-import java.util.List;
-
 public class Node {
     private String id;
     private Node left;

@@ -1,10 +1,6 @@
 package com.ruiyang.du.demo;
 
 
-import com.alibaba.fastjson.JSONObject;
-import com.yeepay.g3.sdk.yop.encrypt.DigitalEnvelopeDTO;
-import com.yeepay.g3.sdk.yop.utils.DigitalEnvelopeUtils;
-import com.yeepay.g3.sdk.yop.utils.RSAKeyUtils;
 import sun.misc.BASE64Decoder;
 
 import java.io.IOException;
@@ -14,10 +10,6 @@ import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
-import java.text.SimpleDateFormat;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.List;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -166,15 +158,7 @@ public class ProducterCostumerDemo {
     private static String content="hBE7DzFh4C24eyCMqFRf6NaQwp_gZVST6sMN3iEohYgSWrC8t0k4CmEzkdxhmx16o6yzR15CFu0h6fIOgB0GXyIIiQ0AiU1BuyR-MhZb-zS2j0WQHPxeqv0DfVIGRouTgkvESjOgzKuq6K753FMqI74i3nBViOxdDykrko_7j5BPyXL9if8aEXdFeFWPj4RhdQrKoAbrv_FMsLoVEzZVLUOYXcjB3IgJaUYJ-mD0WZIXXIj-cCTeXbn9O0of5K8sTwdpjhVK-LWYsRFmS-I1TRdT2yKL9sGmrvjfYWUNWlOBXihz--JmHrXTMbitgOwSilfCORo4x3tRPZ5mL1vHWg$bamqMRxcSE9M9StFLECMteF73YeuesejC0bpO2nsJ0Xu40mc7jN7qrrGLuH6B8rhKPdxi1XGhcsuJSlOzO5CRbQvL6XALriESa6rAYrPoFhJ6o5CGxHGX8PCWOqucwU0tOlLk43a_D0lc3XNDzkn59Jr_hRwBzR67-BDwxsJ6nz9KdX5q3P7pwy1keBrazmSbmIM4p2pokHbL1E8LAgc1OXq4zLwHomeOs9wW2RCt7VhMlVpoqrZEhtLwbYIOiyFsGbY8ZA0iPgL_7CYGz7DGQnapMin6lz9yx0uMWQy32xe_IXFQjzhdIYzMIUyCw7Q7mrtKIofHbkfEaQyZoD6y65MSHAYDZwIMTA65vpolnNVM9u2gthdHoIwlrjyCRj_WhLxtw9CFhacH2XFZGlrRZSERAvyGKEdpC-_DlBLMKFA6kkA20eoVLUVNa2PwckwcFgyFrmeFplug0m8vzEKsJyyjNU290WXcm1QyR5Eq2r4oE7w4iGj3YL7QyGeeq_1vHfF9NkHfK-MG9Qcg5wqHfyf9U93642e5HGOIYVMb8KvO2UwE_LcAhDvWUV9Gyl7Kj-IkioG7br4PYF7w32J_tmKLNUbgrXq6YvqwN8F1v5F688cINWPRMBa2VClFDR25_C5zc_myVF-AFIPcHu1YJ5mahRnaA7AWT8oqGFcaJ3lluuSMYRcbQvUWZsSCoWkcdzyVeOWkGadNQAybK4oHmdunyLDJV_iNw7xu557HHwyVBMqX6AA2AvCd984IZP-sYjk4xpFoyt2CBGP3OiNSSEIzuc_g8CqWdCPkbd-IYdRgysj2wIYJvMSpPyzLbjLtp6pzFIsn23m3qSwPAFcsIXO8cNPpHrY8ccy9t8MxNQ$AES$SHA256";
 
 
-    public static void main(String[] args) throws Exception{
-        PrivateKey myPrivateKey = getPrivateKey();
-        PublicKey yopPublicKey = getPubKey();
 
-        DigitalEnvelopeDTO dto = new DigitalEnvelopeDTO();
-        dto.setCipherText(content);
-        dto = DigitalEnvelopeUtils.decrypt(dto, myPrivateKey, yopPublicKey);
-        System.out.println(dto.getPlainText());
-    }
 
     private static PublicKey getPubKey() {
         PublicKey publicKey = null;

@@ -1,7 +1,5 @@
 package com.ruiyang.du.utils;
 
-import org.apache.commons.lang3.StringUtils;
-
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.security.InvalidKeyException;
@@ -28,6 +26,6 @@ public class EncoderHmacSha256 {
             ex.printStackTrace();
 //             LOGGER.error("Md5Utils.encoderHmacSha256 Exception,ex={}", ex.getMessage());
         }
-        return StringUtils.EMPTY;
+        return "";
     }
 }

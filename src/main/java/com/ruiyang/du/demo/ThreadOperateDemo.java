@@ -41,15 +41,24 @@ public class ThreadOperateDemo {
         }
     }
 
-
+    private static Long testVoid(){
+        try {
+            System.out.println(Thread.currentThread().getName() + "子线程开始执行");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return System.currentTimeMillis();
+    }
 
 
     public static void main(String[] args) throws Exception {
-        ArrayBlockingQueue<Runnable> queue = new ArrayBlockingQueue<>(128);
-        ThreadPoolExecutor executor = new ThreadPoolExecutor(5, 5, 30, TimeUnit.SECONDS, queue);
-        for (int i = 0; i < 20; i++) {
-            MyThread2 myThread = new MyThread2();
-            executor.submit(myThread);
-        }
+//        ArrayBlockingQueue<Runnable> queue = new ArrayBlockingQueue<>(128);
+//        ThreadPoolExecutor executor = new ThreadPoolExecutor(5, 5, 30, TimeUnit.SECONDS, queue);
+//        for (int i = 0; i < 20; i++) {
+//            MyThread2 myThread = new MyThread2();
+//            executor.submit(myThread);
+//        }
+
+
     }
 }
